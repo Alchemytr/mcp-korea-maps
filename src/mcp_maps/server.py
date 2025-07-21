@@ -8,7 +8,6 @@ import argparse
 from typing import Any, Optional, Literal
 
 from fastmcp import FastMCP
-from mcp.types import EmbeddedResource, TextResourceContents
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -109,7 +108,7 @@ def signal_handler(signum, frame):
 @mcp.tool
 async def geocode_address(
     place_name: str,
-) -> EmbeddedResource:
+) -> dict[str, Any]:
     """
     Convert address or place name to coordinates using Kakao Local API.
 
@@ -124,7 +123,7 @@ async def geocode_address(
             - Landmark names: "롯데월드타워"
 
     Returns:
-        EmbeddedResource containing geocoding results with the following structure:
+        Dictionary containing geocoding results with the following structure:
         {
             "documents": [
                 {
@@ -155,44 +154,24 @@ async def geocode_address(
         }
 
         If no results found, documents array will be empty with total_count: 0
+        If an error occurs, returns a dictionary with "error" and "place_name" fields.
     """
     try:
         # Get the API client lazily
         client = get_api_client()
 
-        # Call the API client
+        # Call the API client and return result directly
         result = await client.geocode(place_name)
-
-        # Return as EmbeddedResource
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://geocode/{place_name}",
-                mimeType="application/json",
-                text=json.dumps(
-                    result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
+        return result
     except Exception as e:
         logger.error(f"Error in geocode_address: {e}")
-        error_result = {"error": str(e), "place_name": place_name}
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://geocode-error/{place_name}",
-                mimeType="application/json",
-                text=json.dumps(
-                    error_result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
+        return {"error": str(e), "place_name": place_name}
 
 
 @mcp.tool
 async def search_places_by_keyword(
     keyword: str,
-) -> EmbeddedResource:
+) -> dict[str, Any]:
     """
     Search for places by keyword using Kakao Local API.
 
@@ -207,7 +186,7 @@ async def search_places_by_keyword(
             - Categories: "병원", "주유소", "편의점"
 
     Returns:
-        EmbeddedResource containing search results with the following structure:
+        Dictionary containing search results with the following structure:
         {
             "documents": [
                 {
@@ -237,38 +216,19 @@ async def search_places_by_keyword(
                 }
             }
         }
+
+        If an error occurs, returns a dictionary with "error" and "keyword" fields.
     """
     try:
         # Get the API client lazily
         client = get_api_client()
 
-        # Call the API client
+        # Call the API client and return result directly
         result = await client.search_by_keyword(keyword)
-
-        # Return as EmbeddedResource
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://search/{keyword}",
-                mimeType="application/json",
-                text=json.dumps(
-                    result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
+        return result
     except Exception as e:
         logger.error(f"Error in search_places_by_keyword: {e}")
-        error_result = {"error": str(e), "keyword": keyword}
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://search-error/{keyword}",
-                mimeType="application/json",
-                text=json.dumps(
-                    error_result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
+        return {"error": str(e), "keyword": keyword}
 
 
 @mcp.tool
@@ -277,7 +237,7 @@ async def get_directions_by_coordinates(
     origin_latitude: float,
     dest_longitude: float,
     dest_latitude: float,
-) -> EmbeddedResource:
+) -> dict[str, Any]:
     """
     Get directions between two coordinate points using Kakao Mobility API.
 
@@ -291,7 +251,7 @@ async def get_directions_by_coordinates(
         dest_latitude: Destination latitude (y coordinate). Example: 37.4979462 (Gangnam Station)
 
     Returns:
-        EmbeddedResource containing detailed route information:
+        Dictionary containing detailed route information:
         {
             "trans_id": "0197cad3d0377135acf438afb40466f7",
             "routes": [
@@ -369,51 +329,32 @@ async def get_directions_by_coordinates(
                 }
             ]
         }
+
+        If an error occurs, returns a dictionary with "error", "origin", and "destination" fields.
     """
     try:
         # Get the API client lazily
         client = get_api_client()
 
-        # Call the API client
+        # Call the API client and return result directly
         result = await client.direction_search_by_coordinates(
             origin_longitude, origin_latitude, dest_longitude, dest_latitude
         )
-
-        # Return as EmbeddedResource
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://directions/{origin_longitude},{origin_latitude}/{dest_longitude},{dest_latitude}",
-                mimeType="application/json",
-                text=json.dumps(
-                    result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
+        return result
     except Exception as e:
         logger.error(f"Error in get_directions_by_coordinates: {e}")
-        error_result = {
+        return {
             "error": str(e),
             "origin": f"{origin_longitude},{origin_latitude}",
             "destination": f"{dest_longitude},{dest_latitude}",
         }
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://directions-error/{origin_longitude},{origin_latitude}/{dest_longitude},{dest_latitude}",
-                mimeType="application/json",
-                text=json.dumps(
-                    error_result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
 
 
 @mcp.tool
 async def get_directions_by_address(
     origin_address: str,
     dest_address: str,
-) -> EmbeddedResource:
+) -> dict[str, Any]:
     """
     Get directions between two addresses using Kakao Mobility API.
 
@@ -429,7 +370,7 @@ async def get_directions_by_address(
         dest_address: Destination address or place name (same format as origin)
 
     Returns:
-        EmbeddedResource containing route information with same structure as get_directions_by_coordinates.
+        Dictionary containing route information with same structure as get_directions_by_coordinates.
 
         Example successful response for "서울역" to "강남역":
         {
@@ -453,7 +394,7 @@ async def get_directions_by_address(
         }
 
         Error cases:
-        - If address cannot be found: returns error with geocoding failure message
+        - If address cannot be found: returns dictionary with "error", "origin_address", and "dest_address" fields
         - If no route available: returns error from routing API
 
         Note: This tool automatically falls back to keyword search if geocoding fails,
@@ -463,37 +404,16 @@ async def get_directions_by_address(
         # Get the API client lazily
         client = get_api_client()
 
-        # Call the API client
+        # Call the API client and return result directly
         result = await client.direction_search_by_address(origin_address, dest_address)
-
-        # Return as EmbeddedResource
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://directions/{origin_address}/{dest_address}",
-                mimeType="application/json",
-                text=json.dumps(
-                    result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
+        return result
     except Exception as e:
         logger.error(f"Error in get_directions_by_address: {e}")
-        error_result = {
+        return {
             "error": str(e),
             "origin_address": origin_address,
             "dest_address": dest_address,
         }
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://directions-error/{origin_address}/{dest_address}",
-                mimeType="application/json",
-                text=json.dumps(
-                    error_result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
 
 
 @mcp.tool
@@ -509,7 +429,7 @@ async def get_future_directions(
     car_type: int | None = None,
     car_fuel: Literal["GASOLINE", "DIESEL", "LPG"] | None = None,
     car_hipass: bool | None = None,
-) -> EmbeddedResource:
+) -> dict[str, Any]:
     """
     Get future directions with departure time using Kakao Mobility API.
 
@@ -541,7 +461,7 @@ async def get_future_directions(
         car_hipass: Whether vehicle has Hi-Pass for toll roads (boolean)
 
     Returns:
-        EmbeddedResource containing future route information with traffic predictions:
+        Dictionary containing future route information with traffic predictions:
         {
             "trans_id": "0197cad3d3a07950848fd42a326576a2",
             "routes": [
@@ -580,6 +500,8 @@ async def get_future_directions(
         Example usage:
         - departure_time="202507030900" for July 3, 2025 at 9:00 AM
         - duration will reflect expected traffic at that time
+
+        If an error occurs, returns a dictionary with "error", "origin", "destination", and "departure_time" fields.
     """
     try:
         # Get the API client lazily
@@ -593,7 +515,7 @@ async def get_future_directions(
         if car_fuel and car_fuel not in ["GASOLINE", "DIESEL", "LPG"]:
             raise ValueError("Car fuel must be one of: GASOLINE, DIESEL, LPG")
 
-        # Call the API client
+        # Call the API client and return result directly
         result = await client.future_direction_search_by_coordinates(
             origin_longitude=origin_longitude,
             origin_latitude=origin_latitude,
@@ -607,36 +529,15 @@ async def get_future_directions(
             car_fuel=car_fuel,
             car_hipass=car_hipass,
         )
-
-        # Return as EmbeddedResource
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://future-directions/{origin_longitude},{origin_latitude}/{destination_longitude},{destination_latitude}",
-                mimeType="application/json",
-                text=json.dumps(
-                    result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
+        return result
     except Exception as e:
         logger.error(f"Error in get_future_directions: {e}")
-        error_result = {
+        return {
             "error": str(e),
             "origin": f"{origin_longitude},{origin_latitude}",
             "destination": f"{destination_longitude},{destination_latitude}",
             "departure_time": departure_time,
         }
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://future-directions-error/{origin_longitude},{origin_latitude}/{destination_longitude},{destination_latitude}",
-                mimeType="application/json",
-                text=json.dumps(
-                    error_result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
 
 
 @mcp.tool
@@ -646,7 +547,7 @@ async def optimize_multi_destination_route(
     destinations: str,
     radius: int = 5000,
     priority: Literal["TIME", "DISTANCE"] | None = None,
-) -> EmbeddedResource:
+) -> dict[str, Any]:
     """
     Optimize routes to multiple destinations using Kakao Mobility API.
 
@@ -670,7 +571,7 @@ async def optimize_multi_destination_route(
             - "DISTANCE": Minimize total distance
 
     Returns:
-        EmbeddedResource containing optimized route information for each destination:
+        Dictionary containing optimized route information for each destination:
         {
             "trans_id": "0197cad3d4177de2b9e304f1800ef2e0",
             "routes": [
@@ -711,6 +612,8 @@ async def optimize_multi_destination_route(
 
         Note: Results show individual routes from origin to each destination,
         not a single optimized path visiting all destinations in sequence.
+
+        If an error occurs, returns a dictionary with "error", "origin", "destinations", and "radius" fields.
     """
     try:
         # Get the API client lazily
@@ -741,43 +644,22 @@ async def optimize_multi_destination_route(
             "y": origin_latitude,
         }
 
-        # Call the API client
+        # Call the API client and return result directly
         result = await client.multi_destination_direction_search(
             origin=origin,
             destinations=destinations_list,
             radius=radius,
             priority=priority,
         )
-
-        # Return as EmbeddedResource
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://multi-destination/{origin_longitude},{origin_latitude}",
-                mimeType="application/json",
-                text=json.dumps(
-                    result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
+        return result
     except Exception as e:
         logger.error(f"Error in optimize_multi_destination_route: {e}")
-        error_result = {
+        return {
             "error": str(e),
             "origin": f"{origin_longitude},{origin_latitude}",
             "destinations": destinations,
             "radius": radius,
         }
-        return EmbeddedResource(
-            type="resource",
-            resource=TextResourceContents(
-                uri=f"kakao-maps://multi-destination-error/{origin_longitude},{origin_latitude}",
-                mimeType="application/json",
-                text=json.dumps(
-                    error_result, ensure_ascii=False, indent=2, separators=(",", ": ")
-                ),
-            ),
-        )
 
 
 # Add health check endpoint for HTTP transports

@@ -1,5 +1,4 @@
 import pytest
-import json
 import os
 from unittest.mock import patch, AsyncMock
 
@@ -63,13 +62,9 @@ class TestServerFunctions:
         with patch("mcp_maps.server.get_api_client", return_value=mock_client):
             result = await geocode_func("서울시 강남구 테헤란로 152")
 
-            assert result.type == "resource"
-            assert result.resource.mimeType == "application/json"
-            assert "kakao-maps://geocode/" in str(result.resource.uri)
-
-            # Parse the JSON response
-            response_data = json.loads(result.resource.text)
-            assert response_data == mock_response
+            # Now result is directly a dictionary
+            assert isinstance(result, dict)
+            assert result == mock_response
 
     @pytest.mark.asyncio
     async def test_geocode_address_error(self, mock_client):
@@ -82,13 +77,11 @@ class TestServerFunctions:
         with patch("mcp_maps.server.get_api_client", return_value=mock_client):
             result = await geocode_func("invalid address")
 
-            assert result.type == "resource"
-            assert "error" in str(result.resource.uri)
-
-            # Parse the JSON response
-            response_data = json.loads(result.resource.text)
-            assert "error" in response_data
-            assert response_data["error"] == "API Error"
+            # Now result is directly a dictionary
+            assert isinstance(result, dict)
+            assert "error" in result
+            assert result["error"] == "API Error"
+            assert result["place_name"] == "invalid address"
 
     @pytest.mark.asyncio
     async def test_search_places_by_keyword_success(self, mock_client):
@@ -111,12 +104,9 @@ class TestServerFunctions:
         with patch("mcp_maps.server.get_api_client", return_value=mock_client):
             result = await search_func("카카오")
 
-            assert result.type == "resource"
-            assert result.resource.mimeType == "application/json"
-            assert "kakao-maps://search/" in str(result.resource.uri)
-
-            response_data = json.loads(result.resource.text)
-            assert response_data == mock_response
+            # Now result is directly a dictionary
+            assert isinstance(result, dict)
+            assert result == mock_response
 
     @pytest.mark.asyncio
     async def test_get_directions_by_coordinates_success(self, mock_client):
@@ -132,12 +122,9 @@ class TestServerFunctions:
                 127.0357821, 37.4996954, 127.1086228, 37.4012191
             )
 
-            assert result.type == "resource"
-            assert result.resource.mimeType == "application/json"
-            assert "kakao-maps://directions/" in str(result.resource.uri)
-
-            response_data = json.loads(result.resource.text)
-            assert response_data == mock_response
+            # Now result is directly a dictionary
+            assert isinstance(result, dict)
+            assert result == mock_response
 
     @pytest.mark.asyncio
     async def test_get_future_directions_invalid_priority(self, mock_client):
@@ -155,12 +142,13 @@ class TestServerFunctions:
                 priority="INVALID",
             )
 
-            assert result.type == "resource"
-            assert "error" in str(result.resource.uri)
-
-            response_data = json.loads(result.resource.text)
-            assert "error" in response_data
-            assert "Priority must be one of" in response_data["error"]
+            # Now result is directly a dictionary
+            assert isinstance(result, dict)
+            assert "error" in result
+            assert "Priority must be one of" in result["error"]
+            assert "origin" in result
+            assert "destination" in result
+            assert "departure_time" in result
 
     @pytest.mark.asyncio
     async def test_optimize_multi_destination_route_invalid_json(self, mock_client):
@@ -173,12 +161,13 @@ class TestServerFunctions:
                 127.0357821, 37.4996954, "invalid json", 5000
             )
 
-            assert result.type == "resource"
-            assert "error" in str(result.resource.uri)
-
-            response_data = json.loads(result.resource.text)
-            assert "error" in response_data
-            assert "Invalid JSON format" in response_data["error"]
+            # Now result is directly a dictionary
+            assert isinstance(result, dict)
+            assert "error" in result
+            assert "Invalid JSON format" in result["error"]
+            assert "origin" in result
+            assert "destinations" in result
+            assert "radius" in result
 
     @pytest.mark.asyncio
     async def test_optimize_multi_destination_route_invalid_priority(self, mock_client):
@@ -192,9 +181,10 @@ class TestServerFunctions:
                 127.0357821, 37.4996954, destinations_json, 5000, "INVALID"
             )
 
-            assert result.type == "resource"
-            assert "error" in str(result.resource.uri)
-
-            response_data = json.loads(result.resource.text)
-            assert "error" in response_data
-            assert "Priority must be either" in response_data["error"]
+            # Now result is directly a dictionary
+            assert isinstance(result, dict)
+            assert "error" in result
+            assert "Priority must be either" in result["error"]
+            assert "origin" in result
+            assert "destinations" in result
+            assert "radius" in result
